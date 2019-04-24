@@ -14,6 +14,7 @@
 
 # How it works
 There are two commands available in the [xMatters orb](https://circleci.com/orbs/registry/orb/xmatters/xmatters-orb). The first is `notify` and accepts individual parameters, most of which come from the [environment variables](https://circleci.com/docs/2.0/env-vars/#built-in-environment-variables). The other command is `notify_raw` and accepts a generic json payload. This allows infinite flexibility for the values in the payload which can then be acted on in the inbound integration script in xMatters. 
+Each command will fire a webhook into an xMatters inbound integration script, which will then parse the payload to generate the event. 
 
 # Installation
 

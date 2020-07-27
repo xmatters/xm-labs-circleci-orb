@@ -1,5 +1,5 @@
 # CircleCI Orb
-[CircleCI](https://circleci.com/) is a leading continious integration and delivery platform for building workflow jobs. The xMatters orb gives CI/CD authors the ability to generate xMatters events as a command in a job. 
+[CircleCI](https://circleci.com/) is a leading continious integration and delivery platform for building workflow jobs. The xMatters orb gives CI/CD authors the ability to generate xMatters events as a command in a job as well as trigger an approval request. 
 
 <kbd>
   <img src="https://github.com/xmatters/xMatters-Labs/raw/master/media/disclaimer.png">
@@ -10,7 +10,7 @@
 * xMatters account - If you don't have one, [get one](https://www.xmatters.com)!
 
 # Files
-* [CircleCI](CircleCI.zip) - The communications plan with the form templates and inbound integration script. 
+* [CircleCI](CircleCI.zip) - The workflow with the form templates and inbound integration script. 
 
 # How it works
 There are two commands available in the [xMatters orb](https://circleci.com/orbs/registry/orb/xmatters/xmatters-orb). The first is `notify` and accepts individual parameters, most of which come from the [environment variables](https://circleci.com/docs/2.0/env-vars/#built-in-environment-variables). The other command is `notify_raw` and accepts a generic json payload. This allows infinite flexibility for the values in the payload which can then be acted on in the inbound integration script in xMatters. 
@@ -20,12 +20,19 @@ Each command will fire a webhook into an xMatters inbound integration script, wh
 
 ## xMatters set up
 
-1. Upload the [CircleCI.zip](CircleCI.zip) comm plan to the Comm Plans section of the Developer tab.
-2. Click edit on the comm plan and navigate to the integration builder. Expand the inbound integrations section.
-3. Click the link for **Inbound from CircleCI** integration and scroll to the bottom. 
-4. Select the appropriate user to use for authentication. This can be an integration user or your user depending on the use case. Make sure the user selected has access permissions on the Comm Plan and Sender Permissions on the **Build Notification** form. 
-5. Copy the url and save for later. 
+1. Upload the [CircleCI.zip](CircleCI.zip) workflow to the Workflows page.
+2. Click on the workflow and navigate to the flows tab.
+3. Click the link for **Build Notification** (or **Approval Request**) to display the flow designer canvas.
+4. Double click on the **Inbound from CircleCI** step and click copy on the initiation url and save for later.
 
+
+**Approval Requests**
+
+If you are using the Approval Requests, then you will also need to set up the custom field for a personal access token. 
+
+1. Open the Admin gear at the bottom of the navigation menu and click Custom Fields. (You will need to have the Company Supervisor role to see this page.)
+2. Create a new custom field of type Text and a name of `CircleCI Token Plain`. It is important to use this exact name as it is referenced in the **Find User Property Value** step in the Approval Request canvas.
+3. Save the field.
 
 ## CircleCI set up
 
@@ -36,6 +43,61 @@ Each command will fire a webhook into an xMatters inbound integration script, wh
 </kbd>
 
 2. Update your project `.circleci/config.yml` file to add a new step to execute either the `notify` or `notify_raw`. See the examples in the [orb](https://circleci.com/orbs/registry/orb/xmatters/xmatters-orb) for more details. 
+
+
+**Approval Requests**
+
+For Approval Requests, you will need a job type of `approval` in your workflow. Here is a simple example of a `config.yaml` file:
+
+```
+version: 2.1
+
+orbs:
+  xmatters: xmatters/xmatters-orb@1.0.4
+
+jobs:
+  build:
+    docker: 
+      - image: circleci/node:4.8.2
+    steps:
+      - run: echo "Building building building!"
+
+  request-approval:
+    docker:
+      - image: circleci/node:4.8.2
+    steps:
+      - xmatters/notify:
+          recipients: Engineering Managers
+
+  hold:
+    docker:
+      - image: circleci/node:4.8.2
+    steps:
+      - run: echo "Hold for approval"
+
+  deploy-stuff:
+    docker:
+      - image: circleci/node:4.8.2
+    steps:
+      - run: echo "Deploy stuff here"
+
+workflows:
+  build-test-and-approval-deploy:
+    jobs:
+      - build
+      - request-approval
+      - hold:
+          type: approval
+          requires:
+            - build
+            - request-approval
+      - deploy-stuff:
+          requires:
+            - hold
+
+```
+
+Finally, you will need to generate a new [Personal Access Token](https://circleci.com/docs/2.0/managing-api-tokens/) and store that in your `CircleCI Token Plain` custom field. To access the custom field, navigate to your user profile record by clicking your username > Profile in xMatters. 
 
 # Testing
 Build the target project and inspect the build steps in the CircleCI UI and you should receive an event:
